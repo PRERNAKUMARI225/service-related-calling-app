@@ -33,21 +33,21 @@ app.get('/customers', (req, res) => {
 });
 
 app.post('/saveRemarks', (req, res) => {
-  const { id, remarks, date } = req.body;
-  console.log('Received data for saving remarks:', { id, remarks, date });
-  if (!id || !remarks || !date) {
-    res.status(400).json({ error: 'id, remarks, and date are required' });
+  const { id, remarks, followUpDate, bookingDate, selectedReason } = req.body;
+  console.log('Received data for saving remarks:', { id, remarks, followUpDate, bookingDate, selectedReason });
+  if (!id || !remarks || !followUpDate || !bookingDate) {
+    res.status(400).json({ error: 'id, remarks, followUpDate, and bookingDate are required' });
     return;
   }
   
-  connection.query('UPDATE customers SET Remarks = ?, Date = ? WHERE id = ?', [remarks, date, id], (error, results) => {
+  connection.query('UPDATE customers SET Remarks = ?, FollowUpDate = ?, BookingDate = ?, SelectedReason = ? WHERE id = ?', [remarks, followUpDate, bookingDate, selectedReason, id], (error, results) => {
     if (error) {
       console.error('Error saving remarks:', error);
       res.status(500).json({ error: 'Internal server error' });
       return;
     }
     console.log('Remarks saved successfully for id:', id);
-    res.json({ success: true });
+    res.json({ success: true, selectedReason: selectedReason }); // Send the selected reason back as response
   });
 });
 

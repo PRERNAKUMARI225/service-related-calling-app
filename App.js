@@ -1,13 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Button, Linking, StyleSheet, TextInput, Alert } from 'react-native';
+import { View, Text, Button, Linking, StyleSheet, TextInput, Alert, TouchableOpacity, Modal, FlatList } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
+
+const reasonsData = [
+  "High Distance From Home",
+  "High Service Cost",
+  "High Waiting time",
+  "Out of Station",
+  "Poor Repair Quality",
+  "Service Done at other Dealership",
+  "Service Done at Private Workshop",
+  "Service Done at Same Dealer",
+  "Staff Behaviour",
+  "Vehicle Sold",
+  "Vehicle theft",
+  "Wrong number"
+];
 
 const App = () => {
   const [customers, setCustomers] = useState([]);
   const [currentCustomerIndex, setCurrentCustomerIndex] = useState(0);
   const [remarks, setRemarks] = useState('');
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState(new Date());
+  const [bookingDate, setBookingDate] = useState(new Date());
+  const [isFollowUpDatePickerVisible, setFollowUpDatePickerVisibility] = useState(false);
+  const [isBookingDatePickerVisible, setBookingDatePickerVisibility] = useState(false);
+  const [isReasonsModalVisible, setReasonsModalVisible] = useState(false);
+  const [selectedReason, setSelectedReason] = useState('');
+  const [notComingReason, setNotComingReason] = useState('');
 
   useEffect(() => {
     fetchCustomers();
@@ -41,7 +61,11 @@ const App = () => {
   const handleNextCustomer = () => {
     setCurrentCustomerIndex((prevIndex) => prevIndex + 1);
     setRemarks('');
-    setSelectedDate(new Date());
+    setBookingDate(new Date());
+
+    // Reset follow-up date to current date
+    setFollowUpDate(new Date());
+    setNotComingReason('');
   };
 
   const saveRemarks = async () => {
@@ -59,7 +83,9 @@ const App = () => {
         body: JSON.stringify({
           id: currentCustomer.id,
           remarks: remarks,
-          date: selectedDate.toISOString().split('T')[0],
+          followUpDate: followUpDate.toISOString().split('T')[0],
+          bookingDate: bookingDate.toISOString().split('T')[0],
+          selectedReason: notComingReason ? notComingReason : selectedReason, // Use notComingReason if available
         }),
       });
       if (!response.ok) {
@@ -71,7 +97,12 @@ const App = () => {
         fetchCustomers();
         setCurrentCustomerIndex((prevIndex) => prevIndex + 1);
         setRemarks('');
-        setSelectedDate(new Date());
+        setBookingDate(new Date());
+        setSelectedReason('');
+        setNotComingReason('');
+        if (notComingReason) {
+          Alert.alert('Selected reason:', notComingReason); // Display selected reason on emulator
+        }
       } else {
         throw new Error('Failed to save remarks');
       }
@@ -81,17 +112,31 @@ const App = () => {
     }
   };
 
-  const showDatePicker = () => {
-    setDatePickerVisibility(true);
+  const handleReasonSelect = (reason) => {
+    setSelectedReason(reason);
+    setReasonsModalVisible(false);
   };
 
-  const hideDatePicker = () => {
-    setDatePickerVisibility(false);
+  const handleNotComingSelect = (reason) => {
+    setNotComingReason(reason);
+    setRemarks('Not Coming');
+    setReasonsModalVisible(false);
   };
 
-  const handleDateConfirm = (date) => {
-    hideDatePicker();
-    setSelectedDate(date);
+  const handleFollowUpDateChange = (date) => {
+    setFollowUpDate(date);
+    setFollowUpDatePickerVisibility(false);
+  };
+
+  const handleFollowUpDatePickerVisibilityChange = (visible) => {
+    if (!visible) {
+      setFollowUpDatePickerVisibility(visible);
+    } else {
+      // Set minimum date for follow-up date (current date)
+      const minDate = new Date();
+      setFollowUpDate(minDate);
+      setFollowUpDatePickerVisibility(visible);
+    }
   };
 
   return (
@@ -109,13 +154,48 @@ const App = () => {
           onChangeText={setRemarks}
         />
         <View>
-          <Button title="Select Date" onPress={showDatePicker} />
+          <Button title="Select Follow-up Date" onPress={() => handleFollowUpDatePickerVisibilityChange(true)} />
           <DateTimePickerModal
-            isVisible={isDatePickerVisible}
+            isVisible={isFollowUpDatePickerVisible}
             mode="date"
-            onConfirm={handleDateConfirm}
-            onCancel={hideDatePicker}
+            date={followUpDate}
+            onConfirm={handleFollowUpDateChange}
+            onCancel={() => setFollowUpDatePickerVisibility(false)}
+            minimumDate={new Date()} // Set minimum date to current date
+            maximumDate={new Date(new Date().getTime() + (1000 * 60 * 60 * 24 * 8))} // Set maximum date to 8 days from current date
           />
+        </View>
+        <View>
+          <Button title="Select Booking Date" onPress={() => setBookingDatePickerVisibility(true)} />
+          <DateTimePickerModal
+            isVisible={isBookingDatePickerVisible}
+            mode="date"
+            onConfirm={(date) => { setBookingDate(date); setBookingDatePickerVisibility(false); }}
+            onCancel={() => setBookingDatePickerVisibility(false)}
+          />
+        </View>
+        <View style={{ marginTop: 20 }}>
+          <Button title="Not Coming Reason" onPress={() => setReasonsModalVisible(true)} />
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={isReasonsModalVisible}
+            onRequestClose={() => setReasonsModalVisible(false)}
+          >
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <FlatList
+                  data={reasonsData}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity onPress={() => handleNotComingSelect(item)}>
+                      <Text style={styles.reasonText}>{item}</Text>
+                    </TouchableOpacity>
+                  )}
+                  keyExtractor={(item, index) => index.toString()}
+                />
+              </View>
+            </View>
+          </Modal>
         </View>
       </View>
       <View style={styles.buttonsContainer}>
@@ -141,6 +221,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
+    marginTop: 20,
   },
   input: {
     height: 40,
@@ -149,6 +230,23 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     paddingHorizontal: 10,
     width: '100%',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    elevation: 5,
+    maxHeight: 300,
+  },
+  reasonText: {
+    fontSize: 16,
+    paddingVertical: 10,
   },
 });
 
