@@ -58,16 +58,6 @@ const App = () => {
     }
   };
 
-  const handleNextCustomer = () => {
-    setCurrentCustomerIndex((prevIndex) => prevIndex + 1);
-    setRemarks('');
-    setBookingDate(new Date());
-
-    // Reset follow-up date to current date
-    setFollowUpDate(new Date());
-    setNotComingReason('');
-  };
-
   const saveRemarks = async () => {
     try {
       if (!currentCustomer || !currentCustomer.id) {
@@ -95,7 +85,6 @@ const App = () => {
       if (data.success) {
         Alert.alert('Remarks saved successfully!');
         fetchCustomers();
-        setCurrentCustomerIndex((prevIndex) => prevIndex + 1);
         setRemarks('');
         setBookingDate(new Date());
         setSelectedReason('');
@@ -132,9 +121,6 @@ const App = () => {
     if (!visible) {
       setFollowUpDatePickerVisibility(visible);
     } else {
-      // Set minimum date for follow-up date (current date)
-      const minDate = new Date();
-      setFollowUpDate(minDate);
       setFollowUpDatePickerVisibility(visible);
     }
   };
@@ -142,6 +128,7 @@ const App = () => {
   return (
     <View style={styles.container}>
       <View>
+        <Text style={styles.heading}>CUSTOMER DETAILS</Text>
         <Text style={styles.text}>Customer ID: {currentCustomer ? currentCustomer.id : 'Loading...'}</Text>
         <Text style={styles.text}>Customer Name: {currentCustomer ? currentCustomer.Name : 'Loading...'}</Text>
         <Text style={styles.text}>Customer Phone: {currentCustomer ? currentCustomer.Mobno : 'Loading...'}</Text>
@@ -154,7 +141,7 @@ const App = () => {
           onChangeText={setRemarks}
         />
         <View>
-          <Button title="Select Follow-up Date" onPress={() => handleFollowUpDatePickerVisibilityChange(true)} />
+          <Button title="Select Follow-up Date" onPress={() => setFollowUpDatePickerVisibility(true)} />
           <DateTimePickerModal
             isVisible={isFollowUpDatePickerVisible}
             mode="date"
@@ -162,8 +149,8 @@ const App = () => {
             onConfirm={handleFollowUpDateChange}
             onCancel={() => setFollowUpDatePickerVisibility(false)}
             minimumDate={new Date()} // Set minimum date to current date
-            maximumDate={new Date(new Date().getTime() + (1000 * 60 * 60 * 24 * 8))} // Set maximum date to 8 days from current date
           />
+          <Text>{followUpDate.toDateString()}</Text>
         </View>
         <View>
           <Button title="Select Booking Date" onPress={() => setBookingDatePickerVisibility(true)} />
@@ -172,7 +159,9 @@ const App = () => {
             mode="date"
             onConfirm={(date) => { setBookingDate(date); setBookingDatePickerVisibility(false); }}
             onCancel={() => setBookingDatePickerVisibility(false)}
+            maximumDate={new Date(new Date().getTime() + (1000 * 60 * 60 * 24 * 9))} // Set maximum date to 9 days from current date
           />
+          <Text>{bookingDate.toDateString()}</Text>
         </View>
         <View style={{ marginTop: 20 }}>
           <Button title="Not Coming Reason" onPress={() => setReasonsModalVisible(true)} />
@@ -200,7 +189,6 @@ const App = () => {
       </View>
       <View style={styles.buttonsContainer}>
         <Button title="Call Customer" onPress={handleCall} />
-        <Button title="Next Customer" onPress={handleNextCustomer} disabled={!currentCustomer} />
         <Button title="Save Remarks" onPress={saveRemarks} disabled={!remarks} />
       </View>
     </View>
@@ -214,6 +202,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  heading: {
+    textAlign: 'center',
+    fontWeight: 'bold',
+    fontSize: 18,
+    marginBottom: 20,
+  },
   text: {
     marginBottom: 10,
   },
@@ -225,11 +219,11 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
+    borderColor: 'black',
+    borderWidth: 2,
     marginBottom: 10,
     paddingHorizontal: 10,
-    width: '100%',
+    width: '180%',
   },
   modalContainer: {
     flex: 1,
